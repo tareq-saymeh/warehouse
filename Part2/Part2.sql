@@ -38,15 +38,47 @@ SELECT
     SUM(p.amount),
     CONCAT(s.first_name, ' ', s.last_name),
     CONCAT('Film: ', f.title, ' | Customer: ', c.first_name, ' ', c.last_name),
-    MONTHNAME(p.payment_date),
-    YEAR(p.payment_date)
+    MONTHNAME(DATE(p.payment_date)) AS month_name,
+    YEAR(DATE(p.payment_date)) AS year
 FROM tst.payment p
 JOIN tst.staff s ON p.staff_id = s.staff_id
 JOIN tst.rental r ON p.rental_id = r.rental_id
 JOIN tst.inventory i ON r.inventory_id = i.inventory_id
 JOIN tst.film f ON i.film_id = f.film_id
 JOIN tst.customer c ON r.customer_id = c.customer_id
-GROUP BY s.staff_id, r.rental_id, MONTH(p.payment_date), YEAR(p.payment_date);
+GROUP BY 
+    s.staff_id,
+    r.rental_id,
+    MONTHNAME(DATE(p.payment_date)),
+    YEAR(DATE(p.payment_date));
 
 
-
+INSERT INTO wh_project.fact_daily_inventory (
+    inventory_count,
+    store_location,
+    film_title,
+    full_date,
+    day_name,
+    month_name,
+    year
+)
+SELECT 
+    COUNT(i.inventory_id) AS inventory_count,
+    a.address AS store_location,
+    f.title AS film_title,
+    DATE(i.last_update) AS full_date,
+    DAYNAME(i.last_update) AS day_name,
+    MONTHNAME(i.last_update) AS month_name,
+    YEAR(i.last_update) AS year
+FROM tst.inventory i
+JOIN tst.store s ON i.store_id = s.store_id
+JOIN tst.address a ON s.address_id = a.address_id
+JOIN tst.film f ON i.film_id = f.film_id
+WHERE i.last_update IS NOT NULL
+GROUP BY 
+    store_location,
+    film_title,
+    full_date,
+    day_name,
+    month_name,
+    year;
